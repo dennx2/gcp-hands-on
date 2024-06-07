@@ -64,6 +64,121 @@ def log_request(req):
     current_app.logger.info('REQ: {0} {1}'.format(req.method, req.url))
 
 
+def logout_session():
+    """
+    Clears known session items.
+    """
+    session.pop('credentials', None)
+    session.pop('user', None)
+    session.pop('state', None)
+    session.pop('error_message', None)
+    session.pop('login_return', None)
+    return
+
+
+def external_url(url):
+    """
+    Cloud Shell routes https://8080-***/ to localhost over http
+    This function replaces the localhost host with the configured scheme + hostname
+    """
+    external_host_url = current_app.config['EXTERNAL_HOST_URL']
+    if external_host_url is None:
+        # force https
+        if url.startswith('http://'):
+            url = f"https://{url[7:]}"
+        return url
+
+    # replace the scheme and hostname with the external host URL
+    parsed_url = urlparse(url)
+    replace_string = f"{parsed_url.scheme}://{parsed_url.netloc}"
+    new_url = f"{external_host_url}{url[len(replace_string):]}"
+    return new_url
+
+
+@app.route('/error')
+def error():
+    """
+    Display an error.
+    """
+
+    log_request(request)
+
+    if "error_message" not in session:
+        return redirect(url_for('.list'))
+
+    # render error
+    return render_template('error.html', error_message=session.pop('error_message', None))
+
+
+@app.route("/login")
+def login():
+    """
+    Login if not already logged in.
+    """
+    log_request(request)
+
+    if not "credentials" in session:
+        # need to log in
+
+        current_app.logger.info('logging in')
+
+        # get authorization URL
+        authorization_url, state = oauth.authorize(
+            callback_uri=external_url(url_for('oauth2callback', _external=True)),
+            client_config=current_app.config['CLIENT_SECRETS'],
+            scopes=current_app.config['SCOPES'])
+
+        current_app.logger.info(f"authorization_url={authorization_url}")
+
+        # save state for verification on callback
+        session['state'] = state
+
+        return redirect(authorization_url)
+
+    # already logged in
+    return redirect(session.pop('login_return', url_for('.list')))
+
+
+@app.route("/oauth2callback")
+def oauth2callback():
+    """
+    Callback destination during OAuth process.
+    """
+    log_request(request)
+
+    # check for error, probably access denied by user
+    error = request.args.get('error', None)
+    if error:
+        session['error_message'] = f"{error}"
+        return redirect(url_for('.error'))
+
+    # handle the OAuth2 callback
+    credentials, user_info = oauth.handle_callback(
+        callback_uri=external_url(url_for('oauth2callback', _external=True)),
+        client_config=current_app.config['CLIENT_SECRETS'],
+        scopes=current_app.config['SCOPES'],
+        request_url=external_url(request.url),
+        stored_state=session.pop('state', None),
+        received_state=request.args.get('state', ''))
+
+    session['credentials'] = credentials
+    session['user'] = user_info
+    current_app.logger.info(f"user_info={user_info}")
+
+    return redirect(session.pop('login_return', url_for('.list')))
+
+
+@app.route("/logout")
+def logout():
+    """
+    Log out and return to root page.
+    """
+    log_request(request)
+
+    logout_session()
+    return redirect(url_for('.list'))
+
+
 @app.route('/')
 def list():
     """
