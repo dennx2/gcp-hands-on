@@ -10,6 +10,8 @@ import booksdb
 import storage
 import secrets
 import oauth
+import translate
+import profiledb
 
 def upload_image_file(img):
     """
@@ -297,6 +299,41 @@ def delete(book_id):
 
     # render list of remaining books
     return redirect(url_for('.list'))
+
+
+@app.route('/profile', methods=['GET', 'POST'])
+def profile():
+    """
+    If GET, show the form to collect updated details for the user profile.
+    If POST, update the profile based on the specified form.
+    """
+    log_request(request)
+
+    # must be logged in
+    if "credentials" not in session:
+        session['login_return'] = url_for('.profile')
+        return redirect(url_for('.login'))
+
+    # read existing profile
+    email = session['user']['email']
+    profile = profiledb.read(email)
+
+    # Save details if form was posted
+    if request.method == 'POST':
+
+        # get book details from form
+        data = request.form.to_dict(flat=True)
+
+        # update profile
+        profiledb.update(data, email)
+        session['preferred_language'] = data['preferredLanguage']
+
+        # return to root
+        return redirect(url_for('.list'))
+
+    # render form to update book
+    return render_template('profile.html', action='Edit',
+        profile=profile, languages=translate.get_languages())
 
 
 # this is only used when running locally

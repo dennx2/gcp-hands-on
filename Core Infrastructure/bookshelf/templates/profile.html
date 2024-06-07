@@ -1,0 +1,31 @@
+<!-- This template creates a single form with a select control and a submit button. The select control is loaded with all of the languages passed in using the languages list variable. The value of each entry is the language_code, and the display_name is shown in the select control. The initially displayed language is the preferredLanguage specified in the profile. -->
+
+{# [START form] #}
+{% extends "base.html" %}
+
+{% block content %}
+
+<h3>Profile for {{session['user']['email']}}</h3>
+
+<form method="POST" enctype="multipart/form-data">
+
+    <div class="form-group">
+        <label for="preferredLanguage">Preferred Language</label>
+        <select id="preferredLanguage" name="preferredLanguage">
+            {% for l in languages %}
+            {% if l.language_code == profile['preferredLanguage'] %}
+            <option value="{{l.language_code}}" selected>{{l.display_name}}</option>
+            {% else %}
+            <option value="{{l.language_code}}">{{l.display_name}}</option>
+            {% endif %}
+            {% endfor %}
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-success">Save</button>
+</form>
+
+{% endblock %}
+
+{# [END form] #}
+
