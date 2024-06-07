@@ -1,11 +1,15 @@
 from flask import current_app, Flask, redirect, render_template
-from flask import request, url_for
+from flask import request, url_for, session
 import logging
 from google.cloud import logging as cloud_logging
+import json
+import os
+from urllib.parse import urlparse
 
 import booksdb
 import storage
-
+import secrets
+import oauth
 
 def upload_image_file(img):
     """
@@ -31,7 +35,15 @@ app = Flask(__name__)
 app.config.update(
     SECRET_KEY=secrets.get_secret('flask-secret-key'),
     MAX_CONTENT_LENGTH=8 * 1024 * 1024,
-    ALLOWED_EXTENSIONS=set(['png', 'jpg', 'jpeg', 'gif']),
+    ALLOWED_EXTENSIONS=set(['png', 'jpg', 'jpeg', 'gif']),    CLIENT_SECRETS=json.loads(secrets.get_secret('bookshelf-client-secrets')),
+    SCOPES=[
+        'openid',
+        'https://www.googleapis.com/auth/contacts.readonly',
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile',
+    ],
+    EXTERNAL_HOST_URL=os.getenv('EXTERNAL_HOST_URL'),
+    # EXTERNAL_HOST_URL is used to determine the callback URL. When you use Web Preview with Cloud Shell, the application set to run as localhost (127.0.0.1) port 80 is exposed to the internet on https://8080-...-cloudshell.dev. This URL will be used to convert the localhost URL for the callback endpoint to the publicly accessible URL. The value will be passed in as an environment variable.
 )
 
 app.debug = True

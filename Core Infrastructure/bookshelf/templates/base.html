@@ -15,6 +15,14 @@
                 <ul class="nav navbar-nav">
                     <li><a href="/">Books</a></li>
                 </ul>
+                <ul class="nav navbar-nav navbar-right">
+                    {% if session['credentials'] %}
+                    <div class="navbar-brand">{{session['user'].email}}</div>
+                    <div class="navbar-brand"><a href="/logout">Logout</a></div>
+                    {% else %}
+                    <div class="navbar-brand"><a href="/login">Login</a></div>
+                    {% endif %}
+                </ul>
             </div>
         </div>
         <div class="container">
