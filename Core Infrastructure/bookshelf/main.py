@@ -215,6 +215,11 @@ def add():
     """
     log_request(request)
 
+    # must be logged in
+    if "credentials" not in session:
+        session['login_return'] = url_for('.add')
+        return redirect(url_for('.login'))
+
     # Save details if form was posted
     if request.method == 'POST':
 
@@ -243,6 +248,11 @@ def edit(book_id):
     If POST, update the book based on the specified form.
     """
     log_request(request)
+
+    # must be logged in
+    if "credentials" not in session:
+        session['login_return'] = url_for('.edit', book_id=book_id)
+        return redirect(url_for('.login'))
 
     # read existing book details
     book = booksdb.read(book_id)
@@ -276,6 +286,11 @@ def delete(book_id):
     Delete the specified book and return to the book list.
     """
     log_request(request)
+
+    # must be logged in
+    if "credentials" not in session:
+        session['login_return'] = url_for('.view', book_id=book_id)
+        return redirect(url_for('.login'))
 
     # delete book
     booksdb.delete(book_id)
