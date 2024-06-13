@@ -2,6 +2,7 @@ from flask import current_app, Flask, redirect, render_template
 from flask import request, url_for, session
 import logging
 from google.cloud import logging as cloud_logging
+from google.cloud import error_reporting
 import json
 import os
 from urllib.parse import urlparse
@@ -362,6 +363,24 @@ def profile():
     # render form to update book
     return render_template('profile.html', action='Edit',
         profile=profile, languages=translate.get_languages())
+
+
+@app.route('/raiseerror')
+def raise_error():
+    """
+    Manually raise an error.
+    """
+    log_request(request)
+
+    print('raise_error()')
+    error_client = error_reporting.Client()
+    error_message = 'Intentionally Created Error'
+    error_client.report(
+        message=error_message,
+        http_context=error_reporting.build_flask_context(request),
+    )
+    session['error_message'] = f"{error_message}"
+    return redirect(url_for('.error'))
 
 
 # this is only used when running locally
